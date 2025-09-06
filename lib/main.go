@@ -1,6 +1,7 @@
 package lib
 
 import (
+	_ "embed"
 	"fmt"
 	"openx/internal/core"
 	"os"
@@ -11,6 +12,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+//go:embed versions.txt
+var versionData string
 
 // OpenX represents the main library interface for managing applications
 type OpenX struct {
@@ -245,13 +249,12 @@ func (ox *OpenX) launchWithOpen(appPath string, args []string) error {
 
 // Version information
 const (
-	Version = "1.0.0"
-	Name    = "OpenX"
+	Name = "OpenX"
 )
 
-// GetVersion returns the library version
+// GetVersion returns the library version from embedded versions.txt
 func GetVersion() string {
-	return Version
+	return strings.TrimSpace(versionData)
 }
 
 // GetName returns the library name

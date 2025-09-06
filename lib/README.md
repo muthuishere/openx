@@ -299,7 +299,7 @@ if err := ox.RunAlias("nonexistent"); err != nil {
 
 ## Version
 
-Current version: **1.0.0**
+Current version: **0.1.1** (read from `versions.txt`)
 
 ```go
 fmt.Println("Library:", lib.GetName())

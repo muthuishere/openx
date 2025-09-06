@@ -15,7 +15,7 @@ vars:
   BIN_NAME: "openx"
   # Release version - read from versions.txt (single source of truth)
   RELEASE_VERSION:
-    sh: cat versions.txt
+    sh: cat lib/versions.txt
 
 tasks:
   clean:
