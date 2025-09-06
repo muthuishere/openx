@@ -1,0 +1,127 @@
+# GoReleaser configuration for LNB
+version: 2
+
+project_name: openx
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: openx
+    env:
+      - CGO_ENABLED=0
+    main: ./cmd/openx
+    binary: openx
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    # Ignore combinations that don't make sense or aren't supported
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: default
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+# GitHub Releases
+release:
+  github:
+    owner: muthuishere
+    name: openx
+  draft: false
+  prerelease: auto
+ name_template: "openx v{{ .Version }}"
+  header: |
+    ## 🚀 openx v{{ .Version }}
+    
+    **Cross-platform developer environment control tool**
+    
+    A unified command-line interface for launching and managing development applications across macOS, Linux, and Windows. 
+    Now with enhanced Microsoft Office support, direct path launching, and color-coded health monitoring!
+    
+    ### 🎯 Key Features:
+    - 🖥️ **Cross-platform compatibility** - Same commands work on all platforms
+    - ⚡ **Quick app launching** - Simple aliases for complex application paths  
+    - 📊 **Health monitoring** - Color-coded status reporting with `--doctor`
+    - 📝 **Office integration** - Built-in support for Word, Excel, PowerPoint
+    - 🎯 **Direct path launching** - Launch any app by path without configuration
+    - 🔄 **Process management** - Clean application termination
+    
+    ### 📥 Installation:
+    ```bash
+    # macOS (Homebrew)
+    brew install muthuishere/openx/openx
+    
+    # Download binary for your platform from the assets below
+    # Extract and add to your PATH
+    ```
+    
+# Homebrew Tap - Separate Repository
+homebrew_casks:
+  - name: openx
+    description: "A cross-platform utility that makes command-line tools accessible from anywhere by creating symbolic links or wrapper scripts in your system's PATH"
+    homepage: "https://github.com/muthuishere/openx"
+    binary: openx
+    repository:
+      owner: muthuishere
+      name: homebrew-openx
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    directory: Casks
+    commit_author:
+      name: openx-bot
+      email: bot@openx.dev
+    commit_msg_template: "Cask update for {{ .ProjectName }} version {{ .Tag }}"
+    hooks:
+      post:
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/openx"]
+          end

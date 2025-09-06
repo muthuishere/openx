@@ -1,0 +1,288 @@
+# GoReleaser-based Taskfile
+version: '3'
+
+# Enable .env file loading
+dotenv: ['.env']
+
+vars:
+  # Repository and environment configuration
+  REPO_OWNER: "muthuishere"
+  REPO_NAME: "openx"
+  GITHUB_REPO: "{{.REPO_OWNER}}/{{.REPO_NAME}}"
+  GITHUB_SECRET_ENVIRONMENT: "dev"
+  
+  # Use APP_NAME from .env as BIN_NAME for backward compatibility
+  BIN_NAME: "openx"
+  # Release version - read from versions.txt (single source of truth)
+  RELEASE_VERSION:
+    sh: cat versions.txt
+
+tasks:
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf dist
+      - mkdir -p dist
+
+  build:
+    desc: Build for current platform
+    cmds:
+      - go build -o dist/{{.BIN_NAME}} ./cmd/openx
+
+
+
+
+
+  # =========================
+  # Application Management (using new openx syntax)
+  # =========================
+  
+
+
+
+  goland:kill:
+    desc: Kill GoLand application
+    deps: [ build ]
+    cmds:
+      - ./dist/openx --kill goland
+
+  vscode:start:
+    desc: Launch VS Code with project directory
+    deps: [ build ]
+    vars:
+      PROJECT: "{{.PROJECT | default `.`}}"
+    cmds:
+      - ./dist/openx code "{{.PROJECT}}"
+
+  vscode:kill:
+    desc: Kill VS Code application
+    deps: [ build ]
+    cmds:
+      - ./dist/openx --kill code
+
+  chrome:start:
+    desc: Launch Chrome with URL
+    deps: [ build ]
+    vars:
+      URL: "{{.URL | default `https://example.com`}}"
+    cmds:
+      - ./dist/openx chrome "{{.URL}}"
+
+  chrome:kill:
+    desc: Kill Chrome application
+    deps: [ build ]
+    cmds:
+      - ./dist/openx --kill chrome  # =========================
+  # GoLand (JetBrains)
+  # =========================
+  goland:start:
+    desc: Launch GoLand (alias -> app bundle; window-tracked if singleton)
+    deps: [ build ]
+    vars:
+      NAME: "{{.NAME | default `goland`}}"
+      PROJECT: "{{.PROJECT | default `~/samples/goland`}}"
+    cmds:
+      - ./dist/openx   goland  "{{.PROJECT}}"
+
+
+
+
+
+  run:
+    desc: Run openx with custom arguments (usage task run ARGS="help")
+    vars:
+      ARGS: '{{.ARGS}}'
+    cmds:
+      - go run ./cmd/openx {{.ARGS}}
+
+  run-help:
+    desc: Show openx help
+    cmds:
+      - go run ./cmd/openx
+
+  run-doctor:
+    desc: Run openx health check
+    cmds:
+      - go run ./cmd/openx --doctor
+
+  run-doctor-json:
+    desc: Run openx health check with JSON output
+    cmds:
+      - go run ./cmd/openx --doctor --json
+
+  # =========================
+  # Example Tasks (matching main.go examples)
+  # =========================
+  example:code:
+    desc: Example - Launch VS Code with myproject/ (matches main.go example)
+    deps: [ build ]
+    cmds:
+      - ./dist/openx code ~/myproject/
+
+  example:kill-multiple:
+    desc: Example - Kill Chrome and Firefox (matches main.go example)
+    deps: [ build ]
+    cmds:
+      - ./dist/openx --kill chrome firefox
+
+  example:doctor-json:
+    desc: Example - Health check in JSON format (matches main.go example)
+    deps: [ build ]
+    cmds:
+      - ./dist/openx --doctor --json
+
+  test-kill:
+    desc: Test killing application(s) by alias
+    deps: [ build ]
+    vars:
+      ALIAS: "{{.ALIAS | default `help`}}"
+    cmds:
+      - echo "Testing kill of {{.ALIAS}}"
+      - ./dist/openx --kill {{.ALIAS}}
+
+  test-doctor:
+    desc: Test health check functionality
+    deps: [ build ]
+    cmds:
+      - echo "Testing doctor command..."
+      - ./dist/openx --doctor
+      - echo "Testing doctor with JSON output..."
+      - ./dist/openx --doctor --json
+
+  build:all:
+    desc: Build for all platforms using GoReleaser
+    cmds:
+      - goreleaser build --clean --snapshot
+
+
+
+
+
+
+  install:
+    desc: Install openx locally
+    deps: [ build:all ]
+    cmds:
+      - task: build
+      - ./dist/{{.BIN_NAME}} ./dist/{{.BIN_NAME}} install
+
+  remove:
+    desc: Remove openx from local system
+    cmds:
+      - task: build
+      - ./dist/{{.BIN_NAME}} ./dist/{{.BIN_NAME}} remove
+      - rm -rf /usr/local/bin/openx
+
+
+  # GoReleaser commands
+  check:
+    desc: Check GoReleaser configuration
+    cmds:
+      - goreleaser check
+
+
+  version:
+    desc: Show current version
+    cmds:
+      - |
+        echo "Current version: {{.RELEASE_VERSION}}"
+        echo "From file: versions.txt"
+
+
+
+  # Release Management (Go-based, no shell scripts)
+  release:
+    desc: Push commits and current tag to origin to trigger automatic GitHub Actions release
+    cmds:
+      - |
+        echo "🚀 Pushing to GitHub..."
+        echo "📤 Pushing commits..."
+        git push origin main
+        if ! git rev-parse "v{{.RELEASE_VERSION}}" >/dev/null 2>&1; then
+          echo "🔖 Creating tag v{{.RELEASE_VERSION}}..."
+          git tag v{{.RELEASE_VERSION}}
+        else
+          echo "🔖 Tag v{{.RELEASE_VERSION}} already exists."
+        fi
+        echo "📤 Pushing current tag v{{.RELEASE_VERSION}}..."
+        git push origin v{{.RELEASE_VERSION}}
+        echo "✅ Commits and tag pushed!"
+        echo ""
+        echo "🚀 GitHub Actions will automatically trigger the release workflow"
+        git checkout main
+
+  setup:npm-publisher:
+    desc: Install goreleaser-npm-publisher globally
+    cmds:
+      - |
+        if ! command -v goreleaser-npm-publisher &> /dev/null; then
+          echo "📦 Installing @muthuishere/goreleaser-npm-publisher..."
+          npm install -g @muthuishere/goreleaser-npm-publisher
+        else
+          echo "✅ goreleaser-npm-publisher already installed"
+        fi
+
+  publish:
+    desc: Publish to GitHub and NPM (used by both local and CI)
+    deps: [ build:all, setup:npm-publisher ]
+    cmds:
+      - |
+        echo "🚀 Running release with GoReleaser..."
+        export GITHUB_TOKEN="{{.GORELEASER_GITHUB_TOKEN}}"
+        goreleaser release --clean
+      - |
+        echo "📦 Building NPM package..."
+        goreleaser-npm-publisher build
+      - |
+        echo "📦 Publishing to NPM..."
+        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}}
+
+  publish-local:
+    desc: Publish locally with proper git tag alignment
+    deps: [ build:all, setup:npm-publisher ]
+    cmds:
+      - |
+        echo "🏷️  Preparing local release for version {{.RELEASE_VERSION}}..."
+        
+        # Ensure we're on main and up to date
+        echo "📍 Ensuring clean git state..."
+        git checkout main
+        
+        # Check if tag exists locally, if not create it
+        if ! git rev-parse "v{{.RELEASE_VERSION}}" >/dev/null 2>&1; then
+          echo "🔖 Creating local tag v{{.RELEASE_VERSION}} for current commit..."
+          git tag v{{.RELEASE_VERSION}}
+        else
+          echo "🔖 Tag v{{.RELEASE_VERSION}} already exists locally"
+        
+          # Check if current commit matches the tag
+          CURRENT_COMMIT=$(git rev-parse HEAD)
+          TAG_COMMIT=$(git rev-parse "v{{.RELEASE_VERSION}}")
+        
+          if [ "$CURRENT_COMMIT" != "$TAG_COMMIT" ]; then
+            echo "⚠️  Current commit ($CURRENT_COMMIT) doesn't match tag commit ($TAG_COMMIT)"
+            echo "🔄 Re-tagging current commit as v{{.RELEASE_VERSION}}..."
+            git tag -d v{{.RELEASE_VERSION}}
+            git tag v{{.RELEASE_VERSION}}
+          else
+            echo "✅ Current commit matches tag commit"
+          fi
+        fi
+        
+        echo "🚀 Running local release with GoReleaser..."
+        export GITHUB_TOKEN="{{.GORELEASER_GITHUB_TOKEN}}"
+        goreleaser release --clean
+      - |
+        echo "📦 Building NPM package..."
+        goreleaser-npm-publisher build
+      - |
+        echo "📦 Publishing to NPM..."
+        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}}
+
+  create-secrets:
+    desc: Create GitHub secrets from .env file
+    cmds:
+      - |
+        export GITHUB_REPO="{{.GITHUB_REPO}}"
+        export GITHUB_ENVIRONMENT="{{.GITHUB_SECRET_ENVIRONMENT}}"
+        go run secrets.go .env

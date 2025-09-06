@@ -1,0 +1,313 @@
+# GoReleaser configuration for openx
+# OpenX - Cross-platform developer environment control tool
+# Builds and releases binaries for Linux, macOS, and Windows
+version: 2
+
+project_name: openx
+
+# Metadata for the project
+metadata:
+  mod_timestamp: '{{ .CommitTimestamp }}'
+
+before:
+  hooks:
+    # Clean up dependencies and generate any needed files
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: openx
+    # Build configuration for the main openx binary
+    env:
+      - CGO_ENABLED=0  # Disable CGO for static binaries
+    main: ./cmd/openx
+    binary: openx
+    
+    # Target platforms - covers most common development environments
+    goos:
+      - linux    # Linux distributions
+      - windows  # Windows 10/11
+      - darwin   # macOS
+    goarch:
+      - amd64    # Intel/AMD 64-bit
+      - arm64    # Apple Silicon, ARM64 Linux
+    
+    # Skip unsupported combinations
+    ignore:
+      - goos: windows
+        goarch: arm64  # Windows ARM64 not commonly used for development
+    
+    # Build flags for optimization and version information
+    ldflags:
+      - -s -w  # Strip debug information and symbol table
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    flags:
+      - -trimpath  # Remove absolute file paths from compiled binary
+
+archives:
+  - id: default
+    # Archive naming convention: openx_v1.0.0_Darwin_x86_64.tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    
+    # Files to include in the release archives
+    files:
+      - README.md     # Documentation
+      - LICENSE*      # License files
+      - CHANGELOG.md  # Release notes (if exists)
+    
+    # Format configuration
+    format_overrides:
+      - goos: windows
+        format: zip  # Windows users expect zip files
+
+# Universal binaries for macOS (combines Intel and Apple Silicon)
+universal_binaries:
+  - id: openx-universal
+    name_template: 'openx'
+    replace: true
+
+checksum:
+  # Generate checksums for security verification
+  name_template: 'checksums.txt'
+  algorithm: sha256
+  extra_files:
+    - glob: './README.md'
+    - glob: './LICENSE*'
+
+# SBOM (Software Bill of Materials) for security and compliance
+sboms:
+  - artifacts: archive
+    args: ["$artifact", "--output", "cyclonedx-json@1.4=$document"]
+
+snapshot:
+  # Version template for development builds
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  # Automatically generate changelog from git commits
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - '^docs:'      # Exclude documentation changes
+      - '^test:'      # Exclude test changes
+      - '^chore:'     # Exclude maintenance changes
+      - '^ci:'        # Exclude CI changes
+      - '^style:'     # Exclude style changes
+      - '^refactor:'  # Exclude refactoring (unless breaking)
+      - merge         # Exclude merge commits
+  groups:
+    - title: '🚀 Features'
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: '🐛 Bug fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: '📚 Documentation'
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: '🔧 Improvements'
+      regexp: '^.*?(perf|improve)(\(.+\))??!?:.+$'
+      order: 3
+    - title: '⚠️ Breaking Changes'
+      regexp: '^.*?!:.+$'
+      order: 999
+    - title: Others
+      order: 1000
+
+# GitHub Releases configuration
+release:
+  github:
+    owner: muthuishere
+    name: openx
+  draft: false
+  prerelease: auto
+  mode: replace  # Replace existing releases if they exist
+  name_template: "openx v{{ .Version }}"
+  header: |
+    ## 🚀 openx v{{ .Version }}
+    
+    **Cross-platform developer environment control tool**
+    
+    A unified command-line interface for launching and managing development applications across macOS, Linux, and Windows. 
+    Now with enhanced Microsoft Office support, direct path launching, and color-coded health monitoring!
+    
+    ### 🎯 Key Features:
+    - 🖥️ **Cross-platform compatibility** - Same commands work on all platforms
+    - ⚡ **Quick app launching** - Simple aliases for complex application paths  
+    - 📊 **Health monitoring** - Color-coded status reporting with `--doctor`
+    - 📝 **Office integration** - Built-in support for Word, Excel, PowerPoint
+    - 🎯 **Direct path launching** - Launch any app by path without configuration
+    - 🔄 **Process management** - Clean application termination
+    
+    ### 📥 Installation:
+    ```bash
+    # macOS (Homebrew)
+    brew install muthuishere/openx/openx
+    
+    # Download binary for your platform from the assets below
+    # Extract and add to your PATH
+    ```
+
+# Homebrew Tap - Separate Repository for macOS package management
+brews:
+  - name: openx
+    description: "Cross-platform developer environment control tool with Office support and direct path launching"
+    homepage: "https://github.com/muthuishere/openx"
+    license: "MIT"
+    folder: Formula
+    
+    repository:
+      owner: muthuishere
+      name: homebrew-openx
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    
+    commit_author:
+      name: openx-bot
+      email: bot@openx.dev
+    
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    
+    # Installation dependencies
+    dependencies:
+      - name: go
+        type: build
+    
+    # Installation instructions
+    install: |
+      bin.install "openx"
+      
+      # Create a sample configuration directory
+      (etc/"openx").mkpath
+      
+      # Install shell completions if they exist
+      if File.exist?("completions/openx.bash")
+        bash_completion.install "completions/openx.bash" => "openx"
+      end
+      if File.exist?("completions/openx.zsh")
+        zsh_completion.install "completions/openx.zsh" => "_openx"
+      end
+      if File.exist?("completions/openx.fish")
+        fish_completion.install "completions/openx.fish"
+      end
+    
+    test: |
+      system "#{bin}/openx", "--version"
+      system "#{bin}/openx", "--help"
+
+# Chocolatey package for Windows
+chocolateys:
+  - name: openx
+    title: OpenX Developer Environment Control
+    authors: Muthu Kumar
+    project_url: https://github.com/muthuishere/openx
+    url_template: "https://github.com/muthuishere/openx/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    copyright: 2024 Muthu Kumar
+    license_url: https://github.com/muthuishere/openx/blob/main/LICENSE
+    require_license_acceptance: false
+    project_source_url: https://github.com/muthuishere/openx
+    docs_url: https://github.com/muthuishere/openx/blob/main/README.md
+    bug_tracker_url: https://github.com/muthuishere/openx/issues
+    tags: "developer tools cli cross-platform office automation"
+    summary: "Cross-platform developer environment control tool"
+    description: |
+      OpenX is a powerful command-line tool that simplifies launching and managing 
+      development applications across Windows, macOS, and Linux. Features include 
+      application aliases, health monitoring, Microsoft Office integration, and 
+      direct path launching capabilities.
+# AUR package for Arch Linux
+aurs:
+  - name: openx-bin
+    homepage: https://github.com/muthuishere/openx
+    description: "Cross-platform developer environment control tool"
+    maintainers:
+      - 'Muthu Kumar <muthu@openx.dev>'
+    license: MIT
+    private_key: '{{ .Env.AUR_KEY }}'
+    git_url: 'ssh://aur@aur.archlinux.org/openx-bin.git'
+    package: |-
+      # bin
+      install -Dm755 "./openx" "${pkgdir}/usr/bin/openx"
+      
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/openx/LICENSE"
+      
+      # completions
+      mkdir -p "${pkgdir}/usr/share/bash-completion/completions"
+      mkdir -p "${pkgdir}/usr/share/zsh/site-functions"
+      mkdir -p "${pkgdir}/usr/share/fish/vendor_completions.d"
+
+# Snap package for Ubuntu/Linux
+snapcrafts:
+  - name: openx
+    summary: Cross-platform developer environment control tool
+    description: |
+      OpenX is a powerful command-line tool that simplifies launching and managing 
+      development applications across Windows, macOS, and Linux. Features include 
+      application aliases, health monitoring, Microsoft Office integration, and 
+      direct path launching capabilities.
+    grade: stable
+    confinement: strict
+    license: MIT
+    base: core22
+    apps:
+      openx:
+        command: openx
+        plugs: ["home", "network"]
+
+# Docker images
+dockers:
+  - image_templates:
+      - "ghcr.io/muthuishere/openx:{{ .Version }}-amd64"
+      - "ghcr.io/muthuishere/openx:latest-amd64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Cross-platform developer environment control tool"
+      - "--label=org.opencontainers.image.url=https://github.com/muthuishere/openx"
+      - "--label=org.opencontainers.image.source=https://github.com/muthuishere/openx"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+  - image_templates:
+      - "ghcr.io/muthuishere/openx:{{ .Version }}-arm64"
+      - "ghcr.io/muthuishere/openx:latest-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.description=Cross-platform developer environment control tool"
+      - "--label=org.opencontainers.image.url=https://github.com/muthuishere/openx"
+      - "--label=org.opencontainers.image.source=https://github.com/muthuishere/openx"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.licenses=MIT"
+    goarch: arm64
+
+# Multi-platform Docker manifest
+docker_manifests:
+  - name_template: "ghcr.io/muthuishere/openx:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/muthuishere/openx:{{ .Version }}-amd64"
+      - "ghcr.io/muthuishere/openx:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/muthuishere/openx:latest"
+    image_templates:
+      - "ghcr.io/muthuishere/openx:latest-amd64"
+      - "ghcr.io/muthuishere/openx:latest-arm64"
+

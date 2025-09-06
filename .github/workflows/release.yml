@@ -1,0 +1,118 @@
+# Release workflow for OpenX
+# Automatically triggered when a version tag is pushed (e.g., v1.0.0)
+# Builds cross-platform binaries and publishes to GitHub Releases, Homebrew, NPM, and Chocolatey
+# Also supports manual triggering via workflow_dispatch
+
+name: 🚀 Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Semantic versioning tags only
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+# Ensure only one release runs at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel releases
+
+# Required permissions for releasing
+permissions:
+  contents: write      # Create releases
+  packages: write      # Publish packages
+  id-token: write      # For OIDC authentication
+  actions: read        # Read workflow artifacts
+
+jobs:
+  release:
+    name: 🚀 Create Release
+    runs-on: ubuntu-latest
+    environment: production  # Use production environment for releases
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for changelog generation
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Validate tag format
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid tag format: $TAG"
+            echo "Expected format: v1.2.3"
+            exit 1
+          fi
+          echo "✅ Valid tag format: $TAG"
+
+      - name: 🐹 Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: 📦 Download dependencies
+        run: go mod download
+
+      - name: 🟢 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Use LTS version
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: 📦 Install NPM publisher
+        run: npm install -g @muthuishere/goreleaser-npm-publisher
+
+      - name: 🔧 Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🚀 Install GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          install-only: true
+
+      - name: ✅ Validate GoReleaser configuration
+        run: goreleaser check
+
+      - name: 🏗️ Pre-release build validation
+        run: |
+          echo "🔍 Running pre-release validation..."
+          task test:all
+          echo "✅ All tests passed"
+
+      - name: 🚀 Run GoReleaser
+        run: task publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: 📋 Release Summary
+        run: |
+          echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Binaries built for Linux, macOS, and Windows" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub release created with assets" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Homebrew formula updated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ NPM package published" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Checksums and SBOM generated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/latest)" >> $GITHUB_STEP_SUMMARY
+
+
+
