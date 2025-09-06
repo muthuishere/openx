@@ -253,10 +253,10 @@ tasks:
         goreleaser release --clean
       - |
         echo "📦 Building NPM package..."
-        goreleaser-npm-publisher build --prefix @muthuishere/
+        goreleaser-npm-publisher build --prefix @muthuishere
       - |
         echo "📦 Publishing to NPM..."
-        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}} --prefix @muthuishere/
+        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}} --prefix @muthuishere
 
   publish-local:
     desc: Publish locally with proper git tag alignment
@@ -295,10 +295,10 @@ tasks:
         goreleaser release --clean
       - |
         echo "📦 Building NPM package..."
-        goreleaser-npm-publisher build --prefix @muthuishere/
+        goreleaser-npm-publisher build --prefix @muthuishere
       - |
         echo "📦 Publishing to NPM..."
-        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}} --prefix @muthuishere/
+        goreleaser-npm-publisher publish --clean --token {{.NPM_TOKEN}} --prefix @muthuishere
 
   create-secrets:
     desc: Create GitHub secrets from .env file
