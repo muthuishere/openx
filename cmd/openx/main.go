@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"openx/internal/core"
+	"openx/lib"
 	"os"
 )
 
@@ -27,19 +27,29 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  openx code myproject/      # Launch VS Code with project\n")
 		fmt.Fprintf(os.Stderr, "  openx --kill chrome firefox # Kill Chrome and Firefox\n")
 		fmt.Fprintf(os.Stderr, "  openx --doctor --json      # Health check in JSON format\n")
+		fmt.Fprintf(os.Stderr, "\nLibrary version: %s\n", lib.GetVersion())
 	}
 
 	flag.Parse()
 
+	// Create library instance
+	ox := lib.New()
+
 	// Ensure config exists
-	if err := core.EnsureConfig(); err != nil {
+	if err := ox.EnsureConfig(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error setting up config: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Handle doctor command
 	if *doctorFlag {
-		if err := core.RunDoctor(*jsonFlag); err != nil {
+		var err error
+		if *jsonFlag {
+			err = ox.DoctorJSON()
+		} else {
+			err = ox.Doctor()
+		}
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Doctor check failed: %v\n", err)
 			os.Exit(1)
 		}
@@ -56,7 +66,7 @@ func main() {
 	// Handle kill command
 	if *killFlag {
 		for _, alias := range aliases {
-			if err := core.CloseApp(alias); err != nil {
+			if err := ox.Kill(alias); err != nil {
 				fmt.Fprintf(os.Stderr, "Error killing %s: %v\n", alias, err)
 				os.Exit(1)
 			}
@@ -67,7 +77,7 @@ func main() {
 	// Handle launch command - single app with arguments
 	alias := aliases[0]
 	args := aliases[1:]
-	if err := core.LaunchApp(alias, args); err != nil {
+	if err := ox.RunAlias(alias, args...); err != nil {
 		fmt.Fprintf(os.Stderr, "Error launching %s: %v\n", alias, err)
 		os.Exit(1)
 	}

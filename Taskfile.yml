@@ -29,6 +29,14 @@ tasks:
     cmds:
       - go build -o dist/{{.BIN_NAME}} ./cmd/openx
 
+  test:all:
+    desc: Run all Go tests with coverage
+    cmds:
+      - go test -v -race -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out
+    generates:
+      - coverage.out
+
 
 
 

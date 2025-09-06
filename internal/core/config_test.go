@@ -10,10 +10,12 @@ import (
 // setupTestConfig creates a temporary config file for testing
 func setupTestConfig(t *testing.T, content string) string {
 	tmpDir := t.TempDir()
-	configPath := filepath.Join(tmpDir, "config.yaml")
+	// Create the correct directory structure: XDG_CONFIG_HOME/openx/config.yaml
+	configDir := filepath.Join(tmpDir, "openx")
+	configPath := filepath.Join(configDir, "config.yaml")
 
 	// Create directory
-	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("Failed to create test config directory: %v", err)
 	}
 
@@ -28,10 +30,10 @@ func setupTestConfig(t *testing.T, content string) string {
 // setTempConfigPath temporarily overrides the config path for testing
 func setTempConfigPath(t *testing.T, path string) func() {
 	// Override getConfigPath for testing by setting environment variable
-	oldHome := os.Getenv("HOME")
 	oldXDG := os.Getenv("XDG_CONFIG_HOME")
 
-	// Set XDG_CONFIG_HOME to control where config is looked for
+	// Set XDG_CONFIG_HOME to the parent directory of openx folder
+	// If path is /tmp/test123/openx/config.yaml, we want XDG_CONFIG_HOME=/tmp/test123
 	tempDir := filepath.Dir(filepath.Dir(path))
 	os.Setenv("XDG_CONFIG_HOME", tempDir)
 
@@ -41,7 +43,6 @@ func setTempConfigPath(t *testing.T, path string) func() {
 		} else {
 			os.Unsetenv("XDG_CONFIG_HOME")
 		}
-		os.Setenv("HOME", oldHome)
 	}
 }
 
