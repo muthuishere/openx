@@ -77,7 +77,7 @@ release:
     name: openx
   draft: false
   prerelease: auto
- name_template: "openx v{{ .Version }}"
+  name_template: "openx v{{ .Version }}"
   header: |
     ## 🚀 openx v{{ .Version }}
     
@@ -102,7 +102,7 @@ release:
     # Download binary for your platform from the assets below
     # Extract and add to your PATH
     ```
-    
+
 # Homebrew Tap - Separate Repository
 homebrew_casks:
   - name: openx
