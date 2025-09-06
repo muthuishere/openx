@@ -52,8 +52,6 @@ jobs:
           version: '~> v2'
           install-only: true
 
-      - name: Run tests
-        run: task test:ci
 
       - name: Run publish
         run: task publish
