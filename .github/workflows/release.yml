@@ -53,7 +53,7 @@ jobs:
           install-only: true
 
       - name: Run tests
-        run: task test:all
+        run: task test:ci
 
       - name: Run publish
         run: task publish

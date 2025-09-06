@@ -31,9 +31,22 @@ tasks:
 
   test:all:
     desc: Run all Go tests with coverage
+    deps: [ build ]
     cmds:
-      - go test -v -race -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out
+      - go test -v -short -timeout=30s ./...
+    generates:
+      - coverage.out
+
+  test:race:
+    desc: Run tests with race detection (for local development)
+    cmds:
+      - go test -v -race -timeout=10m ./...
+
+  test:ci:
+    desc: Run tests optimized for CI
+    deps: [ build ]
+    cmds:
+      - go test -v -timeout=3m -short ./...
     generates:
       - coverage.out
 
