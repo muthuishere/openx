@@ -70,13 +70,13 @@ func killAllMacOS(pattern string) error {
 		// After graceful quit, check if any processes are still running
 		// and force kill them if needed
 		if isProcessRunning(pattern) {
-			return exec.Command("pkill", "-f", pattern).Run()
+			return exec.Command("pkill", "-i", "-f", pattern).Run()
 		}
 		return nil
 	}
 
-	// If graceful quit failed, force kill all matching processes
-	return exec.Command("pkill", "-f", pattern).Run()
+	// If graceful quit failed, force kill all matching processes (case-insensitive)
+	return exec.Command("pkill", "-i", "-f", pattern).Run()
 }
 
 // quitMacOSApp tries to quit an app gracefully via AppleScript
@@ -96,7 +96,8 @@ func quitMacOSApp(appName string) error {
 
 // killAllLinux kills all processes on Linux matching the pattern
 func killAllLinux(pattern string) error {
-	return exec.Command("pkill", "-f", pattern).Run()
+	// Use -i flag for case-insensitive matching
+	return exec.Command("pkill", "-i", "-f", pattern).Run()
 }
 
 // killAllWindows kills all processes on Windows matching the pattern
@@ -131,11 +132,13 @@ func closeMultipleApps(aliases []string) error {
 func isProcessRunning(pattern string) bool {
 	switch runtime.GOOS {
 	case "darwin", "linux":
-		cmd := exec.Command("pgrep", "-f", pattern)
+		// Use -i flag for case-insensitive matching
+		cmd := exec.Command("pgrep", "-i", "-f", pattern)
 		return cmd.Run() == nil
 	case "windows":
 		cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("IMAGENAME eq %s*", pattern))
 		output, err := cmd.Output()
+		// Windows is already case-insensitive by default
 		return err == nil && strings.Contains(string(output), pattern)
 	default:
 		return false
