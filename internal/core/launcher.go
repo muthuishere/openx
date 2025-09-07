@@ -57,7 +57,8 @@ func LaunchApp(alias string, args []string) error {
 // executeApp handles the actual launching of the application
 func executeApp(launchPath string, args []string) error {
 	// Handle macOS .app bundles
-	if runtime.GOOS == "darwin" && strings.HasSuffix(launchPath, ".app") {
+	if runtime.GOOS == "darwin" {
+
 		return launchMacOSApp(launchPath, args)
 	}
 
@@ -84,12 +85,20 @@ func launchMacOSApp(appPath string, args []string) error {
 func launchWithOpen(appPath string, args []string) error {
 	openArgs := []string{"-a", appPath}
 	if len(args) > 0 {
-		openArgs = append(openArgs, "--args")
+		// openArgs = append(openArgs, "--args")
 		openArgs = append(openArgs, args...)
 	}
+	fmt.Printf("Using 'open' command: open %s\n", strings.Join(openArgs, " "))
 
 	cmd := exec.Command("open", openArgs...)
-	return cmd.Start()
+	err := cmd.Start()
+	if err != nil {
+		fmt.Printf("Error with 'open -a %s': %v\n", appPath, err)
+		return fmt.Errorf("failed to launch %s with 'open' command: %w", appPath, err)
+	}
+
+	fmt.Printf("Successfully launched with 'open -a %s'\n", appPath)
+	return nil
 }
 
 // launchMultipleApps launches multiple applications

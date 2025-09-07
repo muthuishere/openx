@@ -169,7 +169,14 @@ func isExecutableCandidate(arg string) bool {
 
 // resolveApplication resolves an application alias to executable path
 func resolveApplication(appName string) (string, error) {
-	ar := newAliasResolver()
+	// Load config for alias resolution
+	config, err := loadConfig()
+	if err != nil {
+		// If config loading fails, continue without alias resolution
+		config = nil
+	}
+
+	ar := newAliasResolver(config)
 
 	// Try alias resolution first
 	if target, ok := ar.Resolve(appName); ok {

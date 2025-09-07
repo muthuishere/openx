@@ -110,7 +110,7 @@ apps:
     windows: "firefox.exe"
   
   safari:
-    darwin: "/Applications/Safari.app"
+    darwin: "Safari"
   
   edge:
     darwin: "/Applications/Microsoft Edge.app"

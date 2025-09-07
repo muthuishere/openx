@@ -3,8 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"openx/internal/core"
 	"openx/lib"
 	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 )
 
 func main() {
@@ -77,8 +81,95 @@ func main() {
 	// Handle launch command - single app with arguments
 	alias := aliases[0]
 	args := aliases[1:]
-	if err := ox.RunAlias(alias, args...); err != nil {
-		fmt.Fprintf(os.Stderr, "Error launching %s: %v\n", alias, err)
-		os.Exit(1)
+
+	// First check if the alias exists in our configuration
+	if isValidAlias(alias) {
+		// It's a valid alias, use normal launch
+		if err := ox.RunAlias(alias, args...); err != nil {
+			fmt.Fprintf(os.Stderr, "Error launching %s: %v\n", alias, err)
+			os.Exit(1)
+		}
+	} else {
+		// Not a valid alias, use fallback based on arguments
+		if len(aliases) == 1 {
+			// Single argument - use system default open command
+			if err := openWithSystemDefault(alias); err != nil {
+				fmt.Fprintf(os.Stderr, "Error opening %s: %v\n", alias, err)
+				os.Exit(1)
+			}
+		} else {
+			// Multiple arguments - treat first as app path, rest as args
+			if err := openWithAppAndArgs(alias, args); err != nil {
+				fmt.Fprintf(os.Stderr, "Error launching %s: %v\n", alias, err)
+				os.Exit(1)
+			}
+		}
 	}
+}
+
+// isValidAlias checks if the given string is a valid alias in the configuration
+func isValidAlias(alias string) bool {
+	// Try to load config and check if alias exists
+	config, err := core.LoadConfig()
+	if err != nil {
+		return false
+	}
+
+	// Check if it's directly in apps
+	if _, exists := config.Apps[strings.ToLower(alias)]; exists {
+		return true
+	}
+
+	// Check if it's a synonym by trying to create a resolver
+	resolver, err := core.NewAliasResolver()
+	if err != nil {
+		return false
+	}
+
+	// Try to resolve - if it resolves, it's valid
+	_, resolved := resolver.Resolve(alias)
+	return resolved
+}
+
+// openWithSystemDefault opens a file or URL using the system's default application
+func openWithSystemDefault(target string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", target)
+	case "linux":
+		// Try xdg-open first, fallback to gio open
+		cmd = exec.Command("xdg-open", target)
+		if err := cmd.Run(); err != nil {
+			cmd = exec.Command("gio", "open", target)
+		}
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", target)
+	default:
+		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+	}
+
+	return cmd.Run()
+}
+
+// openWithAppAndArgs opens using the specified application path with arguments
+func openWithAppAndArgs(appPath string, args []string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "darwin":
+		// On macOS, use 'open -a' for applications
+		cmdArgs := []string{"-a", appPath}
+		cmdArgs = append(cmdArgs, args...)
+		cmd = exec.Command("open", cmdArgs...)
+	case "linux", "windows":
+		// On Linux/Windows, execute directly
+		cmdArgs := append([]string{appPath}, args...)
+		cmd = exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	default:
+		return fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+	}
+
+	return cmd.Run()
 }

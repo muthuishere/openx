@@ -1,98 +1,147 @@
-# openx - Stop Clicking Around, Start Coding
+# openx
 
-**Tired of this?**
-- `⌘+Space` → "VS Code" → `Enter` → wait... → click on project folder
-- Opening browser → typing `http://localhost:3000` → opening Postman → finding that API collection
-- Switching between 5 different apps just to start coding
-- Different commands/paths on Mac vs Linux vs Windows
-- Writing the same app-launching script for every project
+**Your development workflow shouldn't be a clicking marathon.**
 
-**Just do this instead:**
+Every day, developers waste precious minutes clicking through launchers, typing paths, and switching between apps just to start coding. You've probably written the same "launch my dev environment" script dozens of times, only to rewrite it for each new machine or project.
+
+**There's a better way:**
+
 ```bash
-openx vscode . && openx chrome && openx postman
+# Instead of this chaos:
+# ⌘+Space → "VS Code" → Enter → wait → click project folder
+# ⌘+Space → "Chrome" → Enter → type localhost:3000
+# ⌘+Space → "Postman" → Enter → find collection
+
+# Just do this:
+openx vscode . && openx chrome localhost:3000 && openx postman
 ```
 
-**You can also add it to your workflow:**
+**Works everywhere. Integrates with everything you already use.**
+
+Drop openx into your existing package.json scripts, Taskfile, tmuxp sessions, or shell scripts. Same commands work on Mac, Linux, and Windows. No more platform-specific paths or clicking around.
+
 ```json
-// package.json
+// package.json - works on any machine
 {
   "scripts": {
-    "launch-my-env": "openx vscode . && openx chrome && openx postman"
+    "dev": "openx vscode . && openx chrome localhost:3000 && openx postman"
   }
 }
 ```
 
-Cross-platform GUI app launcher that actually works the same everywhere. No more clicking, no more platform-specific scripts.
+**Smart enough to handle anything:**
+- `openx vscode` → launches VS Code
+- `openx README.md` → opens in your default editor  
+- `openx https://github.com` → opens in your default browser
+- `openx TextEdit myfile.txt` → opens TextEdit with the file  
 
-> 💡 See workflow examples for [Taskfile](#taskfile), [Nix](#nix-flakes), [tmuxp](#tmuxp) below
-
-## 📦 Installation
-
-### Homebrew (macOS/Linux)
-```bash
-# Add the tap
-brew tap muthuishere/openx https://github.com/muthuishere/homebrew-openx
-
-# Install openx
-brew install muthuishere/openx/openx
-```
-
-### NPM (Global)
-```bash
-npm install -g @muthuishere/openx
-```
-
-### Direct Download
-Download the latest release from [GitHub Releases](https://github.com/muthuishere/openx/releases)
-
-### Building from Source
-```bash
-git clone https://github.com/muthuishere/openx.git
-cd openx
-go build -o openx ./cmd/openx
-```
-
-## 🚀 Quick Start
+## Get Started in 30 Seconds
 
 ```bash
-# First run - creates config with built-in apps
+# Install (choose one)
+brew install muthuishere/openx/openx    # macOS/Linux
+npm install -g @muthuishere/openx       # Cross-platform
+
+# First run creates config with 50+ popular apps
 openx --doctor
 
-# Launch apps
-openx vscode           # VS Code
-openx chrome           # Chrome browser
-openx word             # Microsoft Word
-openx postman          # Postman
+# Launch your workflow
+openx vscode .
+openx chrome localhost:3000  
+openx postman
 
-# Using aliases
-openx vs               # VS Code
-openx gc               # Chrome
-openx ppt              # PowerPoint
+# Clean up when done
+openx --kill vscode chrome postman
+```
 
-# Open with files/URLs
+**That's it.** Same commands work everywhere. Add to any script, any workflow, any automation.
+
+## Why This Matters
+
+**You already have the perfect workflow setup.** Your package.json scripts are dialed in. Your Taskfile automates everything. Your tmuxp session is precisely configured.
+
+The only thing missing? A reliable way to launch GUI apps that works the same everywhere.
+
+openx fills that gap. It doesn't replace your tools—it makes them better.
+
+**Taskfile.yml**
+```yaml
+tasks:
+  dev:
+    cmds:
+      - openx vscode {{.PWD}}
+      - openx chrome localhost:3000
+      - openx postman
+```
+
+**package.json**
+```json
+{
+  "scripts": {
+    "launch": "openx code . && openx chrome && openx postman",
+    "cleanup": "openx --kill vscode chrome postman"  
+  }
+}
+```
+
+**Shell script**
+```bash
+#!/bin/bash
 openx vscode ~/project
-openx chrome https://github.com
-openx word document.docx
-
-# Close apps
-openx --kill vscode chrome word
-
-# Check what's available
-openx --doctor
+openx chrome localhost:3000
+openx postman
 ```
 
-## 🎯 Built-in Apps
+Works the same whether you're on a MacBook, Ubuntu laptop, or Windows machine.
 
-Works out of the box with common developer tools:
+## 🎯 Built-in Apps & Aliases
 
-**IDEs & Editors**: VS Code, Zed, IntelliJ, GoLand, Cursor  
-**Browsers**: Chrome, Firefox, Arc, Brave, Safari  
-**Dev Tools**: Postman, Docker, Warp Terminal  
-**Office**: Word, Excel, PowerPoint (Microsoft Office on macOS/Windows, LibreOffice on Linux)  
+**Code Editors & IDEs**:
+- `vscode` (`code`, `vs`) - Visual Studio Code
+- `zed` (`z`) - Zed editor
+- `sublime` (`st`) - Sublime Text  
+- `goland` - JetBrains GoLand
+- `intellij` (`idea`, `ij`) - IntelliJ IDEA
+- `webstorm` (`ws`) - WebStorm
+- `pycharm` (`pc`) - PyCharm
+- `vim`, `nvim`, `emacs` - Terminal editors
+
+**Browsers**:
+- `chrome` (`gc`) - Google Chrome
+- `firefox` (`ff`) - Firefox
+- `safari` - Safari (macOS)
+- `edge` - Microsoft Edge
+- `brave` (`br`) - Brave Browser
+- `arc` - Arc Browser
+
+**Developer Tools**:
+- `postman` (`pm`) - Postman API client
+- `docker` - Docker Desktop
+- `figma` (`fig`) - Figma design tool
+- `insomnia` (`ins`) - Insomnia REST client
+- `tableplus` (`tp`) - TablePlus database tool
+
+**Communication & Productivity**:
+- `slack` (`sl`) - Slack
+- `discord` (`dc`) - Discord  
+- `teams` (`tm`) - Microsoft Teams
+- `notion` (`not`) - Notion
+- `obsidian` (`obs`) - Obsidian
+
+**Microsoft Office**:
+- `word` - Microsoft Word / LibreOffice Writer
+- `excel` - Microsoft Excel / LibreOffice Calc
+- `powerpoint` (`ppt`, `pp`) - PowerPoint / LibreOffice Impress
+
+**Terminals**:
+- `terminal` - Default terminal
+- `iterm` (`it`) - iTerm2 (macOS)
+- `wezterm` (`wez`) - WezTerm
+- `alacritty` (`al`) - Alacritty
 
 ## ⚙️ Configuration
 
-Config file: `~/.config/openx/config.yaml`
+Auto-generated config at: `~/.openx/config.yaml`
 
 ```yaml
 apps:
@@ -100,76 +149,232 @@ apps:
     darwin: "/Applications/MyApp.app"
     linux: "myapp"
     windows: "MyApp.exe"
+    kill: ["MyApp", "myapp-helper"]  # Custom kill patterns
 
 aliases:
   ma: myapp
 ```
 
+### Custom Kill Patterns
+```yaml
+apps:
+  chrome:
+    darwin: "/Applications/Google Chrome.app"
+    kill: ["Google Chrome", "Chrome Helper", "chrome"]
+```
+
 ## 🔧 Workflow Integration
 
-### Taskfile
+### Taskfile.yml
 ```yaml
+version: '3'
+
 tasks:
-  launch-dev:
+  dev:
+    desc: Launch development environment
     cmds:
       - openx vscode {{.PWD}}
-      - openx chrome
+      - openx chrome https://localhost:3000
       - openx postman
 
+  test:
+    desc: Run tests with coverage
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
+  test:unit:
+    desc: Run unit tests
+    dir: internal/core
+    cmds:
+      - go test -v -cover
+
+  test:integration:
+    desc: Run integration tests  
+    dir: cmd
+    cmds:
+      - go test -v
+
+  test:all:
+    desc: Run all tests
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
   cleanup:
+    desc: Close development apps
     cmds:
       - openx --kill vscode chrome postman
 ```
 
+### Package.json Scripts
+```json
+{
+  "scripts": {
+    "dev": "openx vscode . && openx chrome http://localhost:3000",
+    "launch": "openx code . && openx chrome && openx postman",
+    "cleanup": "openx --kill vscode chrome postman"
+  }
+}
+```
+
 ### Shell Scripts
 ```bash
-# setup.sh
-openx vscode ~/project
-openx chrome localhost:3000
+#!/bin/bash
+# launch-dev.sh - Full development environment
+openx vscode ~/my-project
+openx chrome http://localhost:3000
 openx postman
+openx figma
+openx slack
 
-# cleanup.sh  
-openx --kill vscode chrome postman
+# For cleanup
+openx --kill vscode chrome postman figma slack
 ```
 
 ### Nix Flakes
 ```nix
-shellHook = ''
-  openx vscode $PWD
-  openx chrome
-'';
+{
+  description = "Development environment with openx";
+  
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  
+  outputs = { self, nixpkgs }: {
+    devShells.default = pkgs.mkShell {
+      buildInputs = [ pkgs.openx ];
+      
+      shellHook = ''
+        echo "🚀 Launching development environment..."
+        openx vscode $PWD
+        openx chrome http://localhost:3000
+        openx postman
+      '';
+    };
+  };
+}
 ```
 
-### tmuxp
-```yaml
-session_name: launch-dev
-windows:
-  - window_name: main
-    shell_command_before:
-      - openx vscode ~/project
-      - openx chrome
-      - openx postman
+## 📖 Commands Reference
+
+### Basic Usage
+```bash
+openx <app> [args...]     # Launch app with optional arguments
+openx <file-or-url>       # Open file/URL with system default
+openx <app> <file>        # Open file with specific app
 ```
 
-## 📖 Commands
+### Process Management
+```bash
+openx --kill <apps...>    # Close apps (case-insensitive, all instances)
+openx --kill chrome firefox postman  # Close multiple apps
+```
+
+### System Information
+```bash
+openx --doctor            # Check all configured apps
+openx --doctor --json     # JSON output for automation
+```
+
+### Smart Fallbacks
+```bash
+# These work even if not configured as aliases:
+openx README.md                    # System default editor
+openx https://github.com          # System default browser  
+openx Calculator                  # macOS Calculator app
+openx /usr/bin/python3 script.py  # Direct executable with args
+```
+
+## 🌟 Key Features
+
+### 🎯 Smart Alias Resolution
+- **50+ Built-in Apps**: Popular development tools work out of the box
+- **Convenient Shortcuts**: `code` for VS Code, `gc` for Chrome, `pm` for Postman
+- **Case-Insensitive**: `openx CHROME` works just like `openx chrome`
+
+### 🔄 Intelligent Fallbacks
+- **Single Argument**: Not an alias? Uses system default (`open`, `xdg-open`, `start`)
+- **Multiple Arguments**: Treats first as app, rest as arguments
+- **Universal Compatibility**: Works with any file, URL, or application
+
+### ⚡ Robust Process Management
+- **Case-Insensitive Killing**: Finds and terminates all process variations
+- **Multiple Instance Support**: Kills ALL running instances of an app
+- **Smart Pattern Matching**: Handles complex app names and helper processes
+
+### 🏗️ Clean Architecture
+- **Single Source of Truth**: Configuration templates in setup, no duplication
+- **Embedded Versioning**: Self-contained version information
+- **Comprehensive Testing**: Unit and integration test coverage
+
+### 🌍 True Cross-Platform
+- **macOS**: Full `.app` bundle support, `open -a` commands, Safari handling
+- **Linux**: `xdg-open`, `gio open` fallbacks, proper desktop integration  
+- **Windows**: `start` command integration, `.exe` handling
+
+## 🧪 Testing
+
+Run the comprehensive test suite:
 
 ```bash
-openx <app> [args...]     # Launch app
-openx --kill <apps...>    # Close apps  
-openx --doctor            # Check available apps
-openx --doctor --json     # JSON output
+# Unit tests
+go test ./internal/core -v
+
+# Integration tests  
+go test ./cmd/openx -v
+
+# All tests with coverage
+go test -cover ./...
+
+# Using Taskfile
+task test:all
 ```
 
-## 🌟 Why openx?
+## 📊 Health Check Example
 
-- **Cross-platform**: Same commands work on macOS, Linux, Windows
-- **Simple**: Just `openx app` to launch anything
-- **Fast**: Perfect for automation and workflows
-- **Flexible**: Use built-in apps or configure your own
-- **Lightweight**: Single binary, no dependencies
+```bash
+$ openx --doctor
+openx doctor (darwin)
+Config: /Users/you/.openx/config.yaml
 
-Perfect for developers who want to quickly launch their IDE, browser, API client, and other tools without clicking around or remembering complex paths.
+Applications:
+  ✓ chrome          /Applications/Google Chrome.app (running)
+    └─ kill: Google Chrome
+  ✗ discord         /Applications/Discord.app
+    └─ kill: Discord  
+  ✓ vscode          /Applications/Visual Studio Code.app (running)
+    └─ kill: Code
+
+Aliases:
+  code       → vscode
+  gc         → chrome
+  pm         → postman
+
+Summary:
+  Total: 16 apps
+  Available: 12
+  Missing: 4
+  Running: 3
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Areas where you can help:
+
+- **New App Definitions**: Add support for more applications
+- **Platform Support**: Improve Linux/Windows compatibility  
+- **Test Coverage**: Add more edge case testing
+- **Documentation**: Improve examples and guides
 
 ## 📄 License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+**Ready to stop clicking and start coding?** 
+
+```bash
+brew install muthuishere/openx/openx
+openx --doctor
+openx vscode . && openx chrome && openx postman
+```

@@ -3,31 +3,59 @@ package core
 import (
 	"runtime"
 	"testing"
+
+	"openx/shared/config"
 )
 
 func TestNewAliasResolver(t *testing.T) {
-	resolver := newAliasResolver()
+	// Create a mock config for testing
+	mockConfig := &config.Config{
+		Apps: map[string]*config.App{
+			"vscode": {
+				Paths: map[string]string{
+					"darwin":  "Visual Studio Code.app",
+					"linux":   "code",
+					"windows": "Code.exe",
+				},
+			},
+		},
+	}
+
+	resolver := newAliasResolver(mockConfig)
 
 	if resolver == nil {
 		t.Fatal("newAliasResolver() returned nil")
 	}
 
-	if resolver.canonicals == nil {
-		t.Fatal("canonicals map is nil")
+	if resolver.config == nil {
+		t.Fatal("config is nil")
 	}
 
 	if resolver.synonyms == nil {
 		t.Fatal("synonyms map is nil")
 	}
 
-	// Check that some canonical apps are initialized
-	if len(resolver.canonicals) == 0 {
-		t.Error("canonicals map is empty, expected some entries")
+	// Check that some synonyms are initialized
+	if len(resolver.synonyms) == 0 {
+		t.Error("synonyms map is empty, expected some entries")
 	}
 }
 
 func TestAliasResolver_Resolve(t *testing.T) {
-	resolver := newAliasResolver()
+	// Create a mock config for testing
+	mockConfig := &config.Config{
+		Apps: map[string]*config.App{
+			"vscode": {
+				Paths: map[string]string{
+					"darwin":  "Visual Studio Code.app",
+					"linux":   "code",
+					"windows": "Code.exe",
+				},
+			},
+		},
+	}
+
+	resolver := newAliasResolver(mockConfig)
 
 	tests := []struct {
 		name     string
@@ -83,40 +111,24 @@ func TestAliasResolver_Resolve(t *testing.T) {
 	}
 }
 
-func TestAliasResolver_InitializeCanonicals(t *testing.T) {
-	resolver := &AliasResolver{
-		canonicals: map[string]map[string]string{},
-		synonyms:   map[string]string{},
+func TestAliasResolver_InitializeSynonyms(t *testing.T) {
+	mockConfig := &config.Config{
+		Apps: map[string]*config.App{
+			"vscode": {
+				Paths: map[string]string{
+					"darwin":  "Visual Studio Code.app",
+					"linux":   "code",
+					"windows": "Code.exe",
+				},
+			},
+		},
 	}
 
-	// Initially empty
-	if len(resolver.canonicals) != 0 {
-		t.Error("canonicals should be empty before initialization")
-	}
-
-	if len(resolver.synonyms) != 0 {
-		t.Error("synonyms should be empty before initialization")
-	}
-
-	resolver.initializeCanonicals()
+	resolver := newAliasResolver(mockConfig)
 
 	// Should be populated after initialization
-	if len(resolver.canonicals) == 0 {
-		t.Error("canonicals should not be empty after initialization")
-	}
-
 	if len(resolver.synonyms) == 0 {
 		t.Error("synonyms should not be empty after initialization")
-	}
-
-	// Check specific entries
-	vscode, exists := resolver.canonicals["vscode"]
-	if !exists {
-		t.Error("vscode should exist in canonicals")
-	}
-
-	if len(vscode) == 0 {
-		t.Error("vscode should have platform-specific entries")
 	}
 
 	// Check synonyms

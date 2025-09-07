@@ -7,12 +7,13 @@ func LoadConfig() (*Config, error) {
 	return loadConfig()
 }
 
-// NewAliasResolver creates a new alias resolver with the given aliases
-func NewAliasResolver(aliases map[string]string) *AliasResolver {
-	resolver := newAliasResolver()
-	//resolver.aliases = aliases
-	resolver.initializeCanonicals()
-	return resolver
+// NewAliasResolver creates a new alias resolver with the current config
+func NewAliasResolver() (*AliasResolver, error) {
+	config, err := loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	return newAliasResolver(config), nil
 }
 
 // Exists checks if a file or directory exists at the given path
