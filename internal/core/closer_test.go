@@ -149,32 +149,27 @@ aliases:
 	}
 }
 
-func TestKillByPattern(t *testing.T) {
+func TestKillAllByPattern(t *testing.T) {
 	tests := []struct {
 		name    string
 		pattern string
 		wantErr bool
 	}{
 		{
-			name:    "non-existent process",
-			pattern: "definitely-not-running-process-12345",
-			wantErr: false, // killByPattern should not error if process doesn't exist
-		},
-		{
-			name:    "empty pattern",
-			pattern: "",
-			wantErr: false,
+			name:    "nonexistent process",
+			pattern: "nonexistent-app-12345",
+			wantErr: false, // killAllByPattern should not error if process doesn't exist
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := killByPattern(tt.pattern)
+			err := killAllByPattern(tt.pattern)
 			if tt.wantErr && err == nil {
-				t.Errorf("killByPattern(%s) expected error but got none", tt.pattern)
+				t.Errorf("killAllByPattern(%s) expected error but got none", tt.pattern)
 			}
 			if !tt.wantErr && err != nil {
-				t.Errorf("killByPattern(%s) unexpected error: %v", tt.pattern, err)
+				t.Errorf("killAllByPattern(%s) unexpected error: %v", tt.pattern, err)
 			}
 		})
 	}

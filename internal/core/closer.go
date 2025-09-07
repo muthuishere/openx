@@ -33,13 +33,12 @@ func CloseApp(alias string) error {
 		return fmt.Errorf("no kill patterns available for %s", alias)
 	}
 
-	// Try each kill pattern until one works
+	// Try each kill pattern and kill all matching processes
 	killed := false
 	for _, pattern := range killPatterns {
-		if err := killByPattern(pattern); err == nil {
-			fmt.Printf("Killed processes matching: %s\n", pattern)
+		if err := killAllByPattern(pattern); err == nil {
+			fmt.Printf("Killed all processes matching: %s\n", pattern)
 			killed = true
-			break
 		}
 	}
 
@@ -50,50 +49,64 @@ func CloseApp(alias string) error {
 	return nil
 }
 
-// killByPattern kills processes matching the given pattern
-func killByPattern(pattern string) error {
+// killAllByPattern kills all processes matching the given pattern
+func killAllByPattern(pattern string) error {
 	switch runtime.GOOS {
 	case "darwin":
-		return killMacOS(pattern)
+		return killAllMacOS(pattern)
 	case "linux":
-		return killLinux(pattern)
+		return killAllLinux(pattern)
 	case "windows":
-		return killWindows(pattern)
+		return killAllWindows(pattern)
 	default:
 		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
 	}
 }
 
-// killMacOS kills processes on macOS
-func killMacOS(pattern string) error {
-	// Try graceful quit via AppleScript first
+// killAllMacOS kills all processes on macOS matching the pattern
+func killAllMacOS(pattern string) error {
+	// For macOS apps, try graceful quit first for GUI apps
 	if err := quitMacOSApp(pattern); err == nil {
+		// After graceful quit, check if any processes are still running
+		// and force kill them if needed
+		if isProcessRunning(pattern) {
+			return exec.Command("pkill", "-f", pattern).Run()
+		}
 		return nil
 	}
 
-	// Fallback to pkill
+	// If graceful quit failed, force kill all matching processes
 	return exec.Command("pkill", "-f", pattern).Run()
 }
 
 // quitMacOSApp tries to quit an app gracefully via AppleScript
 func quitMacOSApp(appName string) error {
-	script := fmt.Sprintf(`tell application "%s" to quit`, appName)
+	// First try to quit all instances of the app gracefully
+	script := fmt.Sprintf(`
+		tell application "System Events"
+			set appList to (name of every application process whose name contains "%s")
+			repeat with appProcess in appList
+				try
+					tell application appProcess to quit
+				end try
+			end repeat
+		end tell`, appName)
 	return exec.Command("osascript", "-e", script).Run()
 }
 
-// killLinux kills processes on Linux
-func killLinux(pattern string) error {
+// killAllLinux kills all processes on Linux matching the pattern
+func killAllLinux(pattern string) error {
 	return exec.Command("pkill", "-f", pattern).Run()
 }
 
-// killWindows kills processes on Windows
-func killWindows(pattern string) error {
-	// Try with .exe extension first
+// killAllWindows kills all processes on Windows matching the pattern
+func killAllWindows(pattern string) error {
+	// Try with .exe extension first - use /F to force kill all processes
 	if err := exec.Command("taskkill", "/F", "/IM", pattern+".exe").Run(); err == nil {
 		return nil
 	}
 
-	// Try without .exe extension
+	// Try without .exe extension - use /F to force kill all processes
 	return exec.Command("taskkill", "/F", "/IM", pattern).Run()
 }
 

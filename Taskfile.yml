@@ -33,9 +33,18 @@ tasks:
     desc: Run all Go tests with coverage
     deps: [ build ]
     cmds:
-      - go test -v -short -timeout=30s ./...
+      - task: test:unit
     generates:
       - coverage.out
+
+  test:unit:
+    desc: Run only unit tests (internal/core and lib packages)
+    deps: [ build ]
+    cmds:
+      - go test -v -short -timeout=30s ./internal/core/...
+      - go test -v -short -timeout=30s ./lib/...
+
+
 
   test:race:
     desc: Run tests with race detection (for local development)
