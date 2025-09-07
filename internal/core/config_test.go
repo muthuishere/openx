@@ -497,7 +497,7 @@ func TestDeriveKillPatterns_E2E_Success(t *testing.T) {
 
 			// If this is the current OS, test the actual derivation
 			if tt.osType == originalGOOS {
-				patterns := app.deriveKillPatterns()
+				patterns := app.DeriveKillPatterns()
 				t.Logf("OS: %s, Path: %s, Patterns: %v", tt.osType, tt.launchPath, patterns)
 
 				// For the current OS, verify the pattern makes sense
